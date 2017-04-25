@@ -1,0 +1,86 @@
+# the question in the search result
+# -*- coding: utf-8 -*-
+import urllib2
+
+from selenium import webdriver
+import url
+import re
+from bs4 import BeautifulSoup
+import selenium.webdriver.support.ui as ui
+import urllib
+import cookielib
+import csv
+import codecs
+from selenium.webdriver.support import expected_conditions as EC
+from selenium.webdriver.common.by import By
+
+
+
+class topic_Spider():
+    def __init__(self,zh_url):
+        self.zh_url=zh_url
+
+
+    def analyzeHtml(self, url):
+
+        driver = webdriver.Firefox()
+        driver.get(url)
+
+
+
+        questions=file('questions_zh.csv','wb')
+        questions.write(codecs.BOM_UTF8)
+        writer=csv.writer(questions)
+        writer.writerow(['ID','question'])
+
+
+        reg_title = re.compile(r'<a class="js-title-link" href=.*?" target="_blank">(.*?)</a>')
+        reg_titleid = re.compile(r'<a class="js-title-link" href="(.*?)" target="_blank">.*?</a>')
+        reg_li = re.compile(r'item clearfix.*?')
+        reg_num = re.compile(
+            r'<a class="zm-item-vote-count hidden-expanded js-expand js-vote-count" data-bind-votecount="">(.*?)</a>')
+
+
+        button_locator=(By.CSS_SELECTOR, 'a[aria-role="button"]')
+
+        flag = 1
+        while flag > 0:
+            driver.execute_script("window.scrollBy(0,document.body.scrollHeight)", "")
+            try:
+                EC.presence_of_element_located(button_locator)
+                driver.find_element_by_css_selector('a[aria-role="button"]').click()
+            except:
+                flag = 0
+
+        bs = BeautifulSoup(driver.page_source,"lxml")
+        li_s = bs.find_all('li', {'class': reg_li})
+
+        for li in li_s:
+            li = str(li)
+            try:
+                title = re.findall(reg_title, li)[0]
+                title = title.replace('<em>', '')
+                title = title.replace('</em>', '')
+                titleid=re.findall(reg_titleid,li)
+                review_num = re.findall(reg_num, li)[0]
+            except:
+                continue
+            titleid=str(titleid)
+            title=str(title)
+            line=[titleid,title]
+            writer.writerow(line)
+#            print title
+#            print titleid
+#            print review_num
+        questions.close()
+
+
+if __name__ == '__main__':
+#    kw = url.parse()
+#    driver = webdriver.Firefox()
+    host="https://www.zhihu.com/search?type=content&q=%E4%B8%80%E5%B8%A6%E4%B8%80%E8%B7%AF"
+#   user_agent = "Mozilla/5.0 (compatible; MSIE 9.0; Windows NT 6.1; Trident/5.0)"
+    spider = topic_Spider(host)
+    spider.analyzeHtml(host)
+
+
